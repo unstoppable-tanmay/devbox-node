@@ -48,6 +48,7 @@ export const authenticate = async (
 export const JWTlogin = async (req: Request, res: Response): Promise<void> => {
   try {
     const token = decodeToken(req.cookies.token);
+    if(!token) console.log("No Token Found")
     if (token.userId) {
       const user = await prisma.user.findUnique({
         where: { id: token.userId },
