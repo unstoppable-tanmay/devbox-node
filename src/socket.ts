@@ -77,6 +77,7 @@ export const runSocketServer = (io: Server) => {
         admin: { socketId: string; user: user };
         allowOthers: boolean;
         invitedUsers: string[];
+        allowOutBoundMessages: boolean
       }) => {
         const roomId = createRoomId();
         if (SocketId_RoomId.get(socket.id)) {
@@ -102,6 +103,7 @@ export const runSocketServer = (io: Server) => {
             },
             invitedUsers: data.invitedUsers,
             roomId: roomId,
+            allowOutBoundMessages: data.allowOutBoundMessages
           });
 
           SocketId_RoomId.set(socket.id, roomId);
@@ -124,6 +126,7 @@ export const runSocketServer = (io: Server) => {
         roomId: string;
         allowOthers: boolean;
         invitedUsers: string[];
+        allowOutBoundMessages
       }) => {
         // if room does not exit then only create the room
         if (rooms.get(data.roomId)) {
@@ -132,6 +135,7 @@ export const runSocketServer = (io: Server) => {
             ...rooms.get(data.roomId),
             allowOthers: data.allowOthers,
             invitedUsers: data.invitedUsers,
+            allowOutBoundMessages:data.allowOutBoundMessages
           });
 
           // after creation send room to the user
@@ -144,6 +148,13 @@ export const runSocketServer = (io: Server) => {
         console.log("Update Room");
       }
     );
+
+    socket.on("outbound", (data: { roomId: string; name: string }) => {
+      if(rooms.get(data.roomId))
+      io.to(rooms.get(data.roomId).admin.socketId).emit("outbound", {
+        name: data.name,
+      });
+    });
 
     // Joining Room
     socket.on(

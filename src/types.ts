@@ -27,5 +27,6 @@ export type room = {
   allowOthers?: boolean;
   code?: code;
   chats?: chats[];
-  invitedUsers?: string[]
+  invitedUsers?: string[];
+  allowOutBoundMessages: boolean;
 };
