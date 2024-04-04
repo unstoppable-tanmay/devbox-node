@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import { room, chats, code, user } from "./types";
 const util = require("util");
+import * as cron from "node-cron";
 
 const { c, cpp, node, python, java } = require("compile-run");
 
@@ -77,7 +78,7 @@ export const runSocketServer = (io: Server) => {
         admin: { socketId: string; user: user };
         allowOthers: boolean;
         invitedUsers: string[];
-        allowOutBoundMessages: boolean
+        allowOutBoundMessages: boolean;
       }) => {
         const roomId = createRoomId();
         if (SocketId_RoomId.get(socket.id)) {
@@ -103,7 +104,7 @@ export const runSocketServer = (io: Server) => {
             },
             invitedUsers: data.invitedUsers,
             roomId: roomId,
-            allowOutBoundMessages: data.allowOutBoundMessages
+            allowOutBoundMessages: data.allowOutBoundMessages,
           });
 
           SocketId_RoomId.set(socket.id, roomId);
@@ -126,7 +127,7 @@ export const runSocketServer = (io: Server) => {
         roomId: string;
         allowOthers: boolean;
         invitedUsers: string[];
-        allowOutBoundMessages
+        allowOutBoundMessages;
       }) => {
         // if room does not exit then only create the room
         if (rooms.get(data.roomId)) {
@@ -135,7 +136,7 @@ export const runSocketServer = (io: Server) => {
             ...rooms.get(data.roomId),
             allowOthers: data.allowOthers,
             invitedUsers: data.invitedUsers,
-            allowOutBoundMessages:data.allowOutBoundMessages
+            allowOutBoundMessages: data.allowOutBoundMessages,
           });
 
           // after creation send room to the user
@@ -150,19 +151,32 @@ export const runSocketServer = (io: Server) => {
     );
 
     socket.on("outbound", (data: { roomId: string; name: string }) => {
-      if(rooms.get(data.roomId))
-      io.to(rooms.get(data.roomId).admin.socketId).emit("outbound", {
-        name: data.name,
-      });
+      if (rooms.get(data.roomId))
+        io.to(rooms.get(data.roomId).admin.socketId).emit("outbound", {
+          name: data.name,
+        });
     });
 
     // Joining Room
     socket.on(
       "join_room",
       (data: { roomId: string; user: { socketId: string; user: user } }) => {
-        let roomData = rooms.get(data.roomId);
+        let roomData: room = rooms.get(data.roomId);
 
         console.log(data.user);
+
+        let usersEmails = roomData.users.map((e) => e.email);
+
+        if (usersEmails.includes(data.user.user.email)) {
+          rooms.set(data.roomId, {
+            ...roomData,
+            users: [
+              ...roomData.users.filter(
+                (e: any) => e.user.email != data.user.user.email
+              ),
+            ],
+          });
+        }
 
         // if room does not exit then only join the room
         if (roomData && data.user.socketId && data.user.user.id) {
@@ -332,23 +346,23 @@ export const runSocketServer = (io: Server) => {
       console.log("A user disconnected:", socket.id);
       // If Room is there and User Is there in the room
       if (rooms.get(data.room)) {
-        // getting the id and delete the member from room
-        console.log(rooms.get(data.room).users);
-        rooms.set(data.room, {
-          ...rooms.get(data.room),
-          users: rooms
-            .get(data.room)
-            .users.filter((e: any) => e.socketId != socket.id),
-        });
-        console.log(rooms.get(data.room).users);
+        // getting the id and delete the member from room after 1 hour
+        setTimeout(() => {
+          rooms.set(data.room, {
+            ...rooms.get(data.room),
+            users: rooms
+              .get(data.room)
+              .users.filter((e: any) => e.socketId != socket.id),
+          });
 
-        // also delete the user from users and user_room
-        SocketId_RoomId.delete(socket.id);
+          SocketId_RoomId.delete(socket.id);
 
-        // delete the room if the room is empty
-        if (rooms.get(data.room).users.length == 0) {
-          rooms.delete(data.room);
-        }
+          // if the room is empty then delete it
+          if (rooms.get(data.room).users.length == 0) {
+            rooms.delete(data.room);
+          }
+        }, 60 * 60 * 1000);
+
         socket.broadcast.to(data.room).emit("update", rooms.get(data.room));
         // leave from the room
         socket.leave(data.room);
@@ -366,22 +380,22 @@ export const runSocketServer = (io: Server) => {
 
       // if room is there
       if (rooms.get(room_from_id)) {
-        // getting the id and delete the member from room
-        console.log(rooms.get(room_from_id).users);
-        rooms.set(room_from_id, {
-          ...rooms.get(room_from_id),
-          users: rooms
-            .get(room_from_id)
-            .users.filter((e: any) => e.socketId != socket.id),
-        });
-        console.log(rooms.get(room_from_id).users);
+        // getting the id and delete the member from room after 1 hour
+        setTimeout(() => {
+          rooms.set(room_from_id, {
+            ...rooms.get(room_from_id),
+            users: rooms
+              .get(room_from_id)
+              .users.filter((e: any) => e.socketId != socket.id),
+          });
 
-        SocketId_RoomId.delete(socket.id);
+          SocketId_RoomId.delete(socket.id);
 
-        // if the room is empty then delete it
-        if (rooms.get(room_from_id).users.length == 0) {
-          rooms.delete(room_from_id);
-        }
+          // if the room is empty then delete it
+          if (rooms.get(room_from_id).users.length == 0) {
+            rooms.delete(room_from_id);
+          }
+        }, 60 * 60 * 1000);
 
         socket.broadcast
           .to(room_from_id)
