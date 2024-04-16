@@ -161,6 +161,11 @@ export const runSocketServer = (io: Server) => {
     socket.on(
       "join_room",
       (data: { roomId: string; user: { socketId: string; user: user } }) => {
+        if (!rooms.has(data.roomId)) {
+          io.to(socket.id).emit("message", "you can not join room");
+          return;
+        }
+
         let roomData: room = rooms.get(data.roomId);
 
         console.log(data.user);
@@ -347,21 +352,21 @@ export const runSocketServer = (io: Server) => {
       // If Room is there and User Is there in the room
       if (rooms.get(data.room)) {
         // getting the id and delete the member from room after 1 hour
-        setTimeout(() => {
-          rooms.set(data.room, {
-            ...rooms.get(data.room),
-            users: rooms
-              .get(data.room)
-              .users.filter((e: any) => e.socketId != socket.id),
-          });
+        // setTimeout(() => {
+        rooms.set(data.room, {
+          ...rooms.get(data.room),
+          users: rooms
+            .get(data.room)
+            .users.filter((e: any) => e.socketId != socket.id),
+        });
 
-          SocketId_RoomId.delete(socket.id);
+        SocketId_RoomId.delete(socket.id);
 
-          // if the room is empty then delete it
-          if (rooms.get(data.room).users.length == 0) {
-            rooms.delete(data.room);
-          }
-        }, 60 * 60 * 1000);
+        // if the room is empty then delete it
+        if (rooms.get(data.room).users.length == 0) {
+          rooms.delete(data.room);
+        }
+        // }, 60 * 60 * 1000);
 
         socket.broadcast.to(data.room).emit("update", rooms.get(data.room));
         // leave from the room
@@ -381,21 +386,21 @@ export const runSocketServer = (io: Server) => {
       // if room is there
       if (rooms.get(room_from_id)) {
         // getting the id and delete the member from room after 1 hour
-        setTimeout(() => {
-          rooms.set(room_from_id, {
-            ...rooms.get(room_from_id),
-            users: rooms
-              .get(room_from_id)
-              .users.filter((e: any) => e.socketId != socket.id),
-          });
+        // setTimeout(() => {
+        rooms.set(room_from_id, {
+          ...rooms.get(room_from_id),
+          users: rooms
+            .get(room_from_id)
+            .users.filter((e: any) => e.socketId != socket.id),
+        });
 
-          SocketId_RoomId.delete(socket.id);
+        SocketId_RoomId.delete(socket.id);
 
-          // if the room is empty then delete it
-          if (rooms.get(room_from_id).users.length == 0) {
-            rooms.delete(room_from_id);
-          }
-        }, 60 * 60 * 1000);
+        // if the room is empty then delete it
+        if (rooms.get(room_from_id).users.length == 0) {
+          rooms.delete(room_from_id);
+        }
+        // }, 60 * 60 * 1000);
 
         socket.broadcast
           .to(room_from_id)
