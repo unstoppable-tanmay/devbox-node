@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "types": ["node"]
+    "types": ["node"],
+    "outDir": "dist"
   },
   "typeRoots": ["../node_modules/@types"],
   "include": ["**/*.ts"],
